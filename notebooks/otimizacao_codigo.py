@@ -45,10 +45,41 @@ def versao_nao_otimizada(df):
 
     return result, tempo_execucao
 
+# Versão otimizada
+
+def versao_otimizada(df):
+    print("\n Rodando versão otimizada...")
+
+    start_prep = time.perf_counter()
+    df['country'] = df['country'].astype('category')
+    df['event_type'] = df['event_type'].astype('category')
+    df['user_id'] = df['user_id'].astype('int32')
+    df['amount'] = df['amount'].astype('float32')
+    prep_time = time.perf_counter() - start_prep
+
+    medir_memoria(df, "Após otimização de dtype")
+
+    start = time.perf_counter()
+    mask = (df['is_premium']) & (df['timestamp'] >= cutoff)
+    result = df.loc[mask].groupby('country').agg(
+        total_amount = ('amount', 'sum'),
+        unique_users=('user_id', 'nunique'),
+        avg_amount=('amount','mean')
+    )
+    tempo_execucao = time.perf_counter() - start
+
+    print(f"Tempo de preparação (conversão dtypes): {prep_time:.3f} segundos")
+    print(f"Tempo execução otimizada: {tempo_execucao:.3f} segundos")
+
+    return result, tempo_execucao, prep_time
+
 # Execução
 result_nao_opt, tempo_nao_opt = versao_nao_otimizada(df.copy())
+result_opt, tempo_opt, prep_time = versao_otimizada(df.copy())
 
 
 # Comparativo
 print("\n Comparativo Final")
 print(f"Tempo não otimizado: {tempo_nao_opt:.3f} s")
+print(f"Tempo otimizado: {tempo_opt:.3f} s (preparação: {prep_time:.3f} s)")
+print(f"Speedup: {tempo_nao_opt / tempo_opt:.2f}x mais rápido (desconsiderando preparação)")
